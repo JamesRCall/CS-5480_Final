@@ -4,7 +4,7 @@ Deep learning pipeline for predicting employee stress/burnout level from tabular
 
 ## What This Repo Does Now
 
-- Loads your CSV dataset
+- Loads a CSV dataset
 - Preprocesses numeric + categorical features consistently
 - Trains a feedforward PyTorch MLP for 3-class prediction
 - Reports accuracy, macro precision/recall/F1, confusion matrix
@@ -44,8 +44,7 @@ python -m final_project.run_experiment --data data/employee_stress.csv --target 
 
 ## Next Steps
 
-1. Run on your real CSV and verify class balance + target labels.
+1. Run on the project CSV and verify class balance + target labels.
 2. Tune MLP settings in `src/final_project/config.py` (layers, dropout, epochs, LR).
 3. Add a small `predict.py` script that loads `mlp_torch.pt` + `preprocessing.pkl` for single-row or batch inference.
-4. Add baseline comparison only when you are ready for the final report section.
-
+4. Add baseline comparison when needed for the final report section.
