@@ -34,6 +34,27 @@ With baselines:
 python -m final_project.run_experiment --data data/employee_stress.csv --target burnout_level --include-baselines
 ```
 
+## Run EDA (Generate Graphs)
+
+Use this command to generate EDA figures for the report:
+
+```powershell
+$env:PYTHONPATH='src'
+python -m final_project.eda_report --data data/employee_stress.csv --target burnout_level --output-dir artifacts/eda
+```
+
+This creates report-ready graphs and EDA summary files in `artifacts/eda/`.
+
+Main figures:
+
+- `fig01_target_class_balance.png`
+- `fig02_missingness_top15.png`
+- `fig03_numeric_distributions_grid.png`
+- `fig04_categorical_work_mode_by_target.png`
+- `fig05_categorical_company_size_by_target.png`
+- `fig06_categorical_job_role_by_target.png`
+- `fig07_mental_health_correlation_heatmap.png`
+
 ## Outputs
 
 - `artifacts/metrics_summary.csv`
