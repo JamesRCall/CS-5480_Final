@@ -34,6 +34,17 @@ With baselines:
 python -m final_project.run_experiment --data data/employee_stress.csv --target burnout_level --include-baselines
 ```
 
+`--include-baselines` runs:
+
+- Logistic Regression
+- Logistic Regression (`class_weight='balanced'`)
+- Random Forest
+- Random Forest (`class_weight='balanced'`)
+- XGBoost
+- XGBoost (balanced sample weights)
+
+Baseline comparison is saved to `artifacts/baseline_comparison.csv` and ranked by `f1_macro`.
+
 ## Run EDA (Generate Graphs)
 
 Use this command to generate EDA figures for the report:
@@ -59,6 +70,7 @@ Main figures:
 
 - `artifacts/metrics_summary.csv`
 - `artifacts/metrics_details.json`
+- `artifacts/baseline_comparison.csv` (when baselines are enabled)
 - `artifacts/confusion_matrix_mlp_torch.csv`
 - `artifacts/models/mlp_torch.pt`
 - `artifacts/models/preprocessing.pkl`

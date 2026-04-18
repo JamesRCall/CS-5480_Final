@@ -35,3 +35,5 @@ pytest-cache-files-*/
 Thumbs.db
 .vscode/
 .idea/
+
+=2.1

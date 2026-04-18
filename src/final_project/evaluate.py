@@ -32,9 +32,18 @@ def save_confusion_matrix(
     df_cm.to_csv(output_dir / f"confusion_matrix_{model_name}.csv", index=True)
 
 
-def save_metrics(results: list[dict], output_dir: Path) -> None:
+def save_metrics(results: list[dict], output_dir: Path, primary_metric: str = "f1_macro") -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(results).to_csv(output_dir / "metrics_summary.csv", index=False)
+    metrics_df = pd.DataFrame(results)
+    metrics_df.to_csv(output_dir / "metrics_summary.csv", index=False)
+
+    baseline_df = metrics_df[metrics_df["model"] != "mlp_torch"].copy()
+    if not baseline_df.empty and primary_metric in baseline_df.columns:
+        baseline_df = baseline_df.sort_values(primary_metric, ascending=False).reset_index(drop=True)
+        baseline_df.insert(0, "rank_by_f1_macro", baseline_df.index + 1)
+        baseline_df["primary_metric"] = primary_metric
+        baseline_df.to_csv(output_dir / "baseline_comparison.csv", index=False)
+
     (output_dir / "metrics_details.json").write_text(
         json.dumps(results, indent=2), encoding="utf-8"
     )

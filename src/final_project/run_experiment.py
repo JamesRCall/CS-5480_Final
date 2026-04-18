@@ -4,7 +4,12 @@ import argparse
 import pickle
 from pathlib import Path
 
-from final_project.baselines import train_logistic_regression, train_random_forest
+from final_project.baselines import (
+    balanced_sample_weights,
+    train_logistic_regression,
+    train_random_forest,
+    train_xgboost,
+)
 from final_project.config import ExperimentConfig
 from final_project.data import (
     build_preprocessor,
@@ -49,12 +54,48 @@ def run(config: ExperimentConfig):
         results.append({"model": "logistic_regression", **metrics})
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "logistic_regression")
 
+    if "logistic_regression_balanced" in config.ml_models:
+        logreg_bal = train_logistic_regression(
+            x_train, y_train_enc, config.random_seed, class_weight="balanced"
+        )
+        preds = logreg_bal.predict(x_test)
+        metrics = classification_metrics(y_test_enc, preds)
+        results.append({"model": "logistic_regression_balanced", **metrics})
+        save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "logistic_regression_balanced")
+
     if "random_forest" in config.ml_models:
         rf = train_random_forest(x_train, y_train_enc, config.random_seed)
         preds = rf.predict(x_test)
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "random_forest", **metrics})
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "random_forest")
+
+    if "random_forest_balanced" in config.ml_models:
+        rf_bal = train_random_forest(x_train, y_train_enc, config.random_seed, class_weight="balanced")
+        preds = rf_bal.predict(x_test)
+        metrics = classification_metrics(y_test_enc, preds)
+        results.append({"model": "random_forest_balanced", **metrics})
+        save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "random_forest_balanced")
+
+    if "xgboost" in config.ml_models:
+        xgb = train_xgboost(x_train, y_train_enc, config.random_seed)
+        preds = xgb.predict(x_test)
+        metrics = classification_metrics(y_test_enc, preds)
+        results.append({"model": "xgboost", **metrics})
+        save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "xgboost")
+
+    if "xgboost_balanced" in config.ml_models:
+        train_weights = balanced_sample_weights(y_train_enc)
+        xgb_bal = train_xgboost(
+            x_train,
+            y_train_enc,
+            config.random_seed,
+            sample_weight=train_weights,
+        )
+        preds = xgb_bal.predict(x_test)
+        metrics = classification_metrics(y_test_enc, preds)
+        results.append({"model": "xgboost_balanced", **metrics})
+        save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "xgboost_balanced")
 
     mlp_model, device, predict_fn = train_mlp(
         x_train=x_train,
@@ -97,7 +138,7 @@ def run(config: ExperimentConfig):
         model_dir / "mlp_torch.pt",
     )
 
-    save_metrics(results, output_dir)
+    save_metrics(results, output_dir, primary_metric="f1_macro")
 
     feature_names = get_feature_names(preprocessor)
     (output_dir / "feature_count.txt").write_text(
@@ -133,11 +174,20 @@ def parse_args():
 
 def main():
     args = parse_args()
+    baseline_models = (
+        "logistic_regression",
+        "logistic_regression_balanced",
+        "random_forest",
+        "random_forest_balanced",
+        "xgboost",
+        "xgboost_balanced",
+    )
+
     config = ExperimentConfig(
         data_path=Path(args.data),
         target_column=args.target,
         output_dir=Path(args.output_dir),
-        ml_models=("logistic_regression", "random_forest") if args.include_baselines else (),
+        ml_models=baseline_models if args.include_baselines else (),
         random_seed=args.seed,
     )
     results = run(config)

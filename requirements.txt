@@ -1,3 +1,4 @@
 -e .
 torch>=2.3
+xgboost>=2.1
 ruff>=0.5
