@@ -7,11 +7,10 @@ Deep learning pipeline for predicting employee stress/burnout level from tabular
 - Loads a CSV dataset
 - Preprocesses numeric + categorical features consistently
 - Trains a feedforward PyTorch MLP for 3-class prediction
-- Compares performance against three baseline models: logistic regression, random forest, and XGBoost
-- Reports accuracy, macro precision/recall/F1, confusion matrices, and per-class classification reports
+- Reports accuracy, macro precision/recall/F1, confusion matrix
 - Saves model + preprocessing artifacts for later inference work
 
-Use `--include-baselines` to include all three baselines during training.
+Optional: add baseline ML models with `--include-baselines`.
 
 ## Project Structure
 
@@ -19,58 +18,40 @@ Use `--include-baselines` to include all three baselines during training.
 - `data/` dataset location
 - `artifacts/` outputs from each run
 
-## Standard workflow
-
-These commands are the simplest way to run the project.
-
-### 1. Set up the environment
+## Run
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+$env:PYTHONPATH='src'
+python -m final_project.run_experiment --data data/employee_stress.csv --target burnout_level
 ```
 
-### 2. Train the models
-
-Run the full pipeline for all three models: MLP, logistic regression, and random forest.
+With baselines:
 
 ```powershell
-python -m final_project.run_experiment --include-baselines
+python -m final_project.run_experiment --data data/employee_stress.csv --target burnout_level --include-baselines
 ```
 
-### 3. Make predictions
+`--include-baselines` runs:
 
-Use the saved models to generate predictions for any model.
+- Logistic Regression
+- Logistic Regression (`class_weight='balanced'`)
+- Random Forest
+- Random Forest (`class_weight='balanced'`)
+- XGBoost
+- XGBoost (balanced sample weights)
 
-```powershell
-python -m final_project.predict --save
-```
+Baseline comparison is saved to `artifacts/baseline_comparison.csv` and ranked by `f1_macro`.
 
-To predict with a specific model:
+## Run EDA (Generate Graphs)
 
-```powershell
-python -m final_project.predict --model random_forest --save
-```
-
-### 4. Run multiple random seeds
-
-The runner uses three automatically selected random seeds by default. You can also pass your own seeds if desired.
+Use this command to generate EDA figures for the report:
 
 ```powershell
-python -m final_project.run_multi_seed --include-baselines
-```
-
-### 5. Generate final reports and charts
-
-```powershell
-python -m final_project.generate_report
-```
-
-### 6. Generate EDA outputs
-
-```powershell
-python -m final_project.eda_report --data data/employee_stress.csv --target burnout_level
+$env:PYTHONPATH='src'
+python -m final_project.eda_report --data data/employee_stress.csv --target burnout_level --output-dir artifacts/eda
 ```
 
 This creates report-ready graphs and EDA summary files in `artifacts/eda/`.
@@ -89,33 +70,14 @@ Main figures:
 
 - `artifacts/metrics_summary.csv`
 - `artifacts/metrics_details.json`
+- `artifacts/baseline_comparison.csv` (when baselines are enabled)
 - `artifacts/confusion_matrix_mlp_torch.csv`
-- `artifacts/classification_report_mlp_torch.csv`
 - `artifacts/models/mlp_torch.pt`
 - `artifacts/models/preprocessing.pkl`
-- `artifacts/eda/` — EDA charts and summaries
-- `artifacts/reports/` — aggregate report tables and charts (`model_performance_summary.png`, `multi_seed_performance_summary.png`, `multi_seed_f1_summary.png`, `class_f1_comparison.png`, `mlp_actual_vs_predicted_counts.png`)
-- `predictions/` — saved prediction CSVs
 
-## File summary
+## Next Steps
 
-- `src/final_project/run_experiment.py` — main training pipeline; trains the MLP and optionally baselines, saves artifacts, metrics, confusion matrices, and classification reports.
-- `src/final_project/predict.py` — inference script that loads saved artifacts and predicts on new CSV input for `mlp_torch`, `logistic_regression`, or `random_forest`.
-- `src/final_project/run_multi_seed.py` — runs the experiment over multiple seeds and aggregates results.
-- `src/final_project/generate_report.py` — builds summary tables and plots from saved metrics.
-- `src/final_project/eda_report.py` — generates exploratory data analysis figures and data summaries.
-- `src/final_project/evaluate.py` — metric calculation and export helper functions.
-- `src/final_project/data.py` — data loading, splitting, preprocessing, and feature handling.
-- `src/final_project/deep_model.py` — PyTorch MLP model definition, training loop, and inference helper.
-- `src/final_project/baselines.py` — baseline training functions for logistic regression and random forest.
-- `src/final_project/config.py` — experiment hyperparameters and configuration defaults.
-- `src/final_project/train.py` — lightweight entrypoint that runs the main experiment.
-
-## Quick commands
-
-- `python -m final_project.run_experiment`
-- `python -m final_project.run_experiment --include-baselines`
-- `python -m final_project.predict --save`
-- `python -m final_project.run_multi_seed --include-baselines`
-- `python -m final_project.generate_report`
-- `python -m final_project.eda_report --data data/employee_stress.csv`
+1. Run on the project CSV and verify class balance + target labels.
+2. Tune MLP settings in `src/final_project/config.py` (layers, dropout, epochs, LR).
+3. Add a small `predict.py` script that loads `mlp_torch.pt` + `preprocessing.pkl` for single-row or batch inference.
+4. Add baseline comparison when needed for the final report section.

@@ -24,36 +24,6 @@ def classification_metrics(y_true, y_pred) -> dict[str, float]:
     }
 
 
-def classification_metrics_per_class(y_true, y_pred, class_names: list[str]) -> pd.DataFrame:
-    precision, recall, f1, support = precision_recall_fscore_support(
-        y_true, y_pred, labels=np.arange(len(class_names)), zero_division=0
-    )
-    report = pd.DataFrame(
-        {
-            "precision": precision,
-            "recall": recall,
-            "f1_score": f1,
-            "support": support,
-        },
-        index=class_names,
-    )
-    macro = classification_metrics(y_true, y_pred)
-    report.loc["macro_avg"] = [
-        macro["precision_macro"],
-        macro["recall_macro"],
-        macro["f1_macro"],
-        int(support.sum()),
-    ]
-    return report
-
-
-def save_classification_report(
-    y_true, y_pred, class_names: list[str], output_dir: Path, model_name: str
-) -> None:
-    report = classification_metrics_per_class(y_true, y_pred, class_names)
-    report.to_csv(output_dir / f"classification_report_{model_name}.csv", index=True)
-
-
 def save_confusion_matrix(
     y_true, y_pred, class_names: list[str], output_dir: Path, model_name: str
 ) -> None:
@@ -62,9 +32,18 @@ def save_confusion_matrix(
     df_cm.to_csv(output_dir / f"confusion_matrix_{model_name}.csv", index=True)
 
 
-def save_metrics(results: list[dict], output_dir: Path) -> None:
+def save_metrics(results: list[dict], output_dir: Path, primary_metric: str = "f1_macro") -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(results).to_csv(output_dir / "metrics_summary.csv", index=False)
+    metrics_df = pd.DataFrame(results)
+    metrics_df.to_csv(output_dir / "metrics_summary.csv", index=False)
+
+    baseline_df = metrics_df[metrics_df["model"] != "mlp_torch"].copy()
+    if not baseline_df.empty and primary_metric in baseline_df.columns:
+        baseline_df = baseline_df.sort_values(primary_metric, ascending=False).reset_index(drop=True)
+        baseline_df.insert(0, "rank_by_f1_macro", baseline_df.index + 1)
+        baseline_df["primary_metric"] = primary_metric
+        baseline_df.to_csv(output_dir / "baseline_comparison.csv", index=False)
+
     (output_dir / "metrics_details.json").write_text(
         json.dumps(results, indent=2), encoding="utf-8"
     )
