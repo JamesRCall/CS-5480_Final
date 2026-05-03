@@ -24,6 +24,36 @@ def classification_metrics(y_true, y_pred) -> dict[str, float]:
     }
 
 
+def classification_metrics_per_class(y_true, y_pred, class_names: list[str]) -> pd.DataFrame:
+    precision, recall, f1, support = precision_recall_fscore_support(
+        y_true, y_pred, labels=np.arange(len(class_names)), zero_division=0
+    )
+    report = pd.DataFrame(
+        {
+            "precision": precision,
+            "recall": recall,
+            "f1_score": f1,
+            "support": support,
+        },
+        index=class_names,
+    )
+    macro = classification_metrics(y_true, y_pred)
+    report.loc["macro_avg"] = [
+        macro["precision_macro"],
+        macro["recall_macro"],
+        macro["f1_macro"],
+        int(support.sum()),
+    ]
+    return report
+
+
+def save_classification_report(
+    y_true, y_pred, class_names: list[str], output_dir: Path, model_name: str
+) -> None:
+    report = classification_metrics_per_class(y_true, y_pred, class_names)
+    report.to_csv(output_dir / f"classification_report_{model_name}.csv", index=True)
+
+
 def save_confusion_matrix(
     y_true, y_pred, class_names: list[str], output_dir: Path, model_name: str
 ) -> None:

@@ -1,7 +1,14 @@
 from __future__ import annotations
 
+import importlib
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+
+try:
+    XGBClassifier = importlib.import_module("xgboost").XGBClassifier
+except ImportError:  
+    XGBClassifier = None
 
 
 def train_logistic_regression(x_train, y_train, random_seed: int):

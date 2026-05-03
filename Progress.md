@@ -23,6 +23,12 @@
   - Preprocessing file (`preprocessing.pkl`)
   - Metrics CSV and JSON files
 - Added README with run instructions.
+- Added `predict.py` inference support for `mlp_torch`, `logistic_regression`, and `random_forest`.
+- Added default prediction saving to `predictions/`.
+- Added per-class classification report export (`classification_report_<model>.csv`).
+- Added baseline model saving so all saved models can be used for inference.
+- Added multi-seed experiment runner with aggregated seed metrics.
+- Added report generator for tables and charts.
 
 ## In Progress
 
@@ -32,11 +38,9 @@
 
 ## Next
 
-- Add a simple `predict.py` script for inference.
-- Make one EDA notebook with key plots for the report.
-- Add per-class results and better error analysis.
-- Run with multiple random seeds for stable results.
-- Prepare final report tables and charts.
+- Generate final report figures and include them in the project writeup.
+- Review model performance across multiple seeds and write analysis.
+- Add EDA notebook or plots for the final report.
 
 ## Notes
 
