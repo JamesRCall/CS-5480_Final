@@ -31,11 +31,12 @@
 ## In Progress
 
 - Running experiments on the final Kaggle dataset file.
+- Confirming full XGBoost baseline integration in multi-seed runs and report generation.
 - Tuning MLP settings (layers, dropout, learning rate, epochs).
 
 ## Next
 
-- Add a `predict.py` script for inference.
+- Validate the XGBoost inference path in `predict.py`.
 - Add per-class results and better error analysis.
 - Run with multiple random seeds for stable results.
 - Prepare final report tables and charts.

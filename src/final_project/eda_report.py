@@ -82,13 +82,55 @@ def _missingness(df: pd.DataFrame, output_dir: Path) -> None:
     )
     missing.to_csv(output_dir / "missingness_summary.csv", index=False)
 
-    top_missing = missing.head(15)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.barh(top_missing["column"][::-1], top_missing["missing_percent"][::-1], color="#7A5195")
-    ax.set_title("Missingness by Feature (Top 15)")
-    ax.set_xlabel("Missing (%)")
-    ax.set_ylabel("Feature")
-    _save(fig, output_dir, "fig02_missingness_top15.png")
+    type_counts = pd.Series(
+        [
+            "numeric" if pd.api.types.is_numeric_dtype(dt)
+            else "boolean" if pd.api.types.is_bool_dtype(dt)
+            else "categorical"
+            for dt in df.dtypes
+        ],
+        index=df.columns,
+    ).value_counts()
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.bar(type_counts.index, type_counts.values, color=["#2C7FB8", "#41AB5D", "#F03B20"])
+    ax.set_title("Feature Type Distribution")
+    ax.set_xlabel("Feature type")
+    ax.set_ylabel("Number of features")
+    for bar in ax.patches:
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.2,
+            int(bar.get_height()),
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
+
+    if missing["missing_count"].sum() == 0:
+        ax.text(
+            0.5,
+            -0.2,
+            "Dataset is complete: no missing values detected.",
+            transform=ax.transAxes,
+            ha="center",
+            va="top",
+            fontsize=10,
+        )
+    else:
+        missing_cols = missing[missing["missing_count"] > 0].shape[0]
+        total_missing = int(missing["missing_count"].sum())
+        ax.text(
+            0.5,
+            -0.2,
+            f"{total_missing} missing values across {missing_cols} features.",
+            transform=ax.transAxes,
+            ha="center",
+            va="top",
+            fontsize=10,
+        )
+
+    _save(fig, output_dir, "fig02_feature_type_distribution.png")
 
 
 def _numeric_distributions(df: pd.DataFrame, output_dir: Path) -> None:
@@ -135,23 +177,87 @@ def _categorical_breakdowns(df: pd.DataFrame, target: str, output_dir: Path) -> 
         return
 
     for fig_idx, col in enumerate(available[:3], start=4):
-        table = pd.crosstab(df[col].astype(str), df[target].astype(str), normalize="index") * 100.0
-        table = table.sort_index()
+        counts = df[col].astype(str).value_counts().head(8)
+        selected_categories = counts.index.tolist()
+        sub = df[df[col].astype(str).isin(selected_categories)].copy()
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        bottom = np.zeros(len(table.index))
-        colors = ["#2C7FB8", "#41AB5D", "#F03B20", "#FEB24C", "#756BB1"]
-        for i, class_name in enumerate(table.columns):
+        table = pd.crosstab(sub[col].astype(str), sub[target].astype(str), normalize="index") * 100.0
+        table = table.reindex(selected_categories).fillna(0)
+
+        classes = list(table.columns)
+        categories = list(table.index)
+        x = np.arange(len(categories))
+        width = 0.8 / max(1, len(classes))
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        for idx, class_name in enumerate(classes):
             values = table[class_name].values
-            ax.bar(table.index, values, bottom=bottom, label=class_name, color=colors[i % len(colors)])
-            bottom += values
+            ax.bar(x + idx * width, values, width=width, label=class_name)
 
-        ax.set_title(f"{col} Breakdown by {target} (Row %)")
+        ax.set_title(f"{col} distribution by {target}")
         ax.set_xlabel(col)
-        ax.set_ylabel("Percent within category")
-        ax.tick_params(axis="x", rotation=20)
-        ax.legend(title=target)
+        ax.set_ylabel("Percent of category")
+        ax.set_xticks(x + width * (len(classes) - 1) / 2)
+        ax.set_xticklabels(categories, rotation=25, ha="right")
+        ax.legend(title=target, bbox_to_anchor=(1.02, 1), loc="upper left")
         _save(fig, output_dir, f"fig0{fig_idx}_categorical_{col}_by_target.png")
+
+
+def _numeric_boxplots(df: pd.DataFrame, target: str, output_dir: Path) -> None:
+    numeric_cols = df.select_dtypes(include=[np.number, "bool"]).columns.tolist()
+    preferred = [
+        "burnout_score",
+        "anxiety_score",
+        "depression_score",
+        "stress_level",
+        "sleep_hours",
+        "work_hours_per_week",
+    ]
+    selected = [c for c in preferred if c in numeric_cols]
+    if len(selected) < 4:
+        fallback = [c for c in numeric_cols if c not in selected]
+        selected.extend(fallback[: max(0, 6 - len(selected))])
+    selected = selected[:6]
+
+    if not selected:
+        return
+
+    classes = sorted(df[target].astype(str).unique())
+    fig, axes = plt.subplots(2, 3, figsize=(14, 8))
+    axes = axes.flatten()
+
+    for idx, col in enumerate(selected):
+        ax = axes[idx]
+        values = []
+        labels = []
+        for cls in classes:
+            cls_values = df[df[target].astype(str) == cls][col].dropna().values
+            if len(cls_values) > 0:
+                values.append(cls_values)
+                labels.append(cls)
+
+        if values:
+            ax.boxplot(
+                values,
+                labels=labels,
+                patch_artist=True,
+                boxprops={"facecolor": "#00876C", "alpha": 0.6},
+                medianprops={"color": "black"},
+                whiskerprops={"color": "black"},
+                capprops={"color": "black"},
+                flierprops={"markerfacecolor": "#666666", "markeredgecolor": "black"},
+            )
+
+        ax.set_title(col)
+        ax.set_xlabel(target if idx >= 3 else "")
+        ax.set_ylabel("Value")
+        ax.tick_params(axis="x", rotation=20)
+
+    for idx in range(len(selected), len(axes)):
+        axes[idx].axis("off")
+
+    fig.suptitle("Numeric feature distributions by burnout class", fontsize=16)
+    _save(fig, output_dir, "fig08_numeric_boxplots_by_target.png")
 
 
 def _mental_health_corr(df: pd.DataFrame, output_dir: Path) -> None:
@@ -220,6 +326,7 @@ def run(data_path: Path, target: str, output_dir: Path) -> None:
     _class_balance(df, target, output_dir)
     _missingness(df, output_dir)
     _numeric_distributions(df, output_dir)
+    _numeric_boxplots(df, target, output_dir)
     _categorical_breakdowns(df, target, output_dir)
     _mental_health_corr(df, output_dir)
     _write_caveats(df, target, output_dir)

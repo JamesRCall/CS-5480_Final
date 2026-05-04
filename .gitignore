@@ -29,6 +29,7 @@ artifacts/
 logs/
 .tmp/
 pytest-cache-files-*/
+predictions/*
 
 # OS / editor files
 .DS_Store
