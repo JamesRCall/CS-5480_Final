@@ -22,7 +22,7 @@ from final_project.data import (
     transform_features,
 )
 from final_project.deep_model import train_mlp
-from final_project.evaluate import classification_metrics, save_confusion_matrix, save_metrics
+from final_project.evaluate import classification_metrics, save_confusion_matrix, save_metrics, save_classification_report
 
 
 def run(config: ExperimentConfig):
@@ -53,6 +53,7 @@ def run(config: ExperimentConfig):
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "logistic_regression", **metrics})
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "logistic_regression")
+        save_classification_report(y_test_enc, preds, class_names, output_dir, "logistic_regression")
 
     if "logistic_regression_balanced" in config.ml_models:
         logreg_bal = train_logistic_regression(
@@ -62,6 +63,7 @@ def run(config: ExperimentConfig):
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "logistic_regression_balanced", **metrics})
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "logistic_regression_balanced")
+        save_classification_report(y_test_enc, preds, class_names, output_dir, "logistic_regression_balanced")
 
     if "random_forest" in config.ml_models:
         rf = train_random_forest(x_train, y_train_enc, config.random_seed)
@@ -69,6 +71,7 @@ def run(config: ExperimentConfig):
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "random_forest", **metrics})
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "random_forest")
+        save_classification_report(y_test_enc, preds, class_names, output_dir, "random_forest")
 
     if "random_forest_balanced" in config.ml_models:
         rf_bal = train_random_forest(x_train, y_train_enc, config.random_seed, class_weight="balanced")
@@ -76,6 +79,7 @@ def run(config: ExperimentConfig):
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "random_forest_balanced", **metrics})
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "random_forest_balanced")
+        save_classification_report(y_test_enc, preds, class_names, output_dir, "random_forest_balanced")
 
     if "xgboost" in config.ml_models:
         xgb = train_xgboost(x_train, y_train_enc, config.random_seed)
@@ -83,6 +87,7 @@ def run(config: ExperimentConfig):
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "xgboost", **metrics})
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "xgboost")
+        save_classification_report(y_test_enc, preds, class_names, output_dir, "xgboost")
 
     if "xgboost_balanced" in config.ml_models:
         train_weights = balanced_sample_weights(y_train_enc)
@@ -96,6 +101,7 @@ def run(config: ExperimentConfig):
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "xgboost_balanced", **metrics})
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "xgboost_balanced")
+        save_classification_report(y_test_enc, preds, class_names, output_dir, "xgboost_balanced")
 
     mlp_model, device, predict_fn = train_mlp(
         x_train=x_train,
@@ -109,6 +115,7 @@ def run(config: ExperimentConfig):
     mlp_metrics = classification_metrics(y_test_enc, mlp_preds)
     results.append({"model": "mlp_torch", **mlp_metrics})
     save_confusion_matrix(y_test_enc, mlp_preds, class_names, output_dir, "mlp_torch")
+    save_classification_report(y_test_enc, mlp_preds, class_names, output_dir, "mlp_torch")
 
     model_dir = output_dir / "models"
     model_dir.mkdir(parents=True, exist_ok=True)

@@ -32,6 +32,24 @@ def save_confusion_matrix(
     df_cm.to_csv(output_dir / f"confusion_matrix_{model_name}.csv", index=True)
 
 
+def save_classification_report(
+    y_true, y_pred, class_names: list[str], output_dir: Path, model_name: str
+) -> None:
+    from sklearn.metrics import classification_report
+
+    report = pd.DataFrame(
+        classification_report(
+            y_true,
+            y_pred,
+            target_names=class_names,
+            output_dict=True,
+            zero_division=0,
+        )
+    )
+    report = report.rename(columns={"f1-score": "f1_score", "precision": "precision", "recall": "recall", "support": "support"})
+    report.to_csv(output_dir / f"classification_report_{model_name}.csv", index=True)
+
+
 def save_metrics(results: list[dict], output_dir: Path, primary_metric: str = "f1_macro") -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     metrics_df = pd.DataFrame(results)

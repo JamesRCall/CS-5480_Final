@@ -57,7 +57,7 @@ def save_model_summary(metrics: pd.DataFrame, output_dir: Path) -> None:
     }
     ax.set_xticklabels([label_map.get(label, label) for label in plot_data.index], rotation=25, ha="right")
     ax.grid(axis="y", linestyle="--", alpha=0.4)
-    ax.legend(title="Metric")
+    ax.legend(title="Metric", bbox_to_anchor=(1.02, 1), loc="upper left")
     for container in ax.containers:
         if hasattr(container, "patches"):
             ax.bar_label(container, fmt="%.2f", label_type="edge", padding=2, fontsize=8)
@@ -110,6 +110,7 @@ def save_class_f1_comparison(metrics_dir: Path, output_dir: Path, model_names: l
     for model_name in model_names:
         report = load_classification_report(metrics_dir, model_name)
         if report is None:
+            print(f"Warning: No classification report found for {model_name}")
             continue
 
         report = report[~report.index.str.contains("macro", case=False, regex=True)]
@@ -118,11 +119,19 @@ def save_class_f1_comparison(metrics_dir: Path, output_dir: Path, model_names: l
             continue
 
         for class_label, row in report.iterrows():
+            f1_value = None
+            if "f1_score" in row:
+                f1_value = row["f1_score"]
+            elif "f1-score" in row:
+                f1_value = row["f1-score"]
+            else:
+                continue
+
             records.append(
                 {
                     "model": model_name,
                     "class": class_label,
-                    "f1_score": float(row["f1_score"]),
+                    "f1_score": float(f1_value),
                 }
             )
 
@@ -131,7 +140,7 @@ def save_class_f1_comparison(metrics_dir: Path, output_dir: Path, model_names: l
 
     data = pd.DataFrame(records)
     pivot = data.pivot(index="class", columns="model", values="f1_score")
-    fig, ax = plt.subplots(figsize=(12, 7))
+    fig, ax = plt.subplots(figsize=(14, 7))
     pivot.plot.bar(ax=ax, rot=0)
     y_min, y_max = _get_plot_limits(data["f1_score"], min_margin=0.08, max_margin=0.08, cap_max=1.03)
     ax.set_ylim(y_min, y_max)
@@ -175,14 +184,11 @@ def save_multi_seed_report(metrics: pd.DataFrame, output_dir: Path) -> None:
     fig, ax = plt.subplots(figsize=(12, 7))
     x = range(len(agg))
     width = 0.18
-    error_values = []
     all_plot_values = []
     for idx, (mean_col, std_col, label) in enumerate(metrics):
         values = agg[mean_col]
-        errors = agg[std_col].fillna(0)
         bar_positions = [pos + idx * width for pos in x]
-        ax.bar(bar_positions, values, width, yerr=errors, capsize=5, label=label)
-        error_values.extend((values + errors).tolist())
+        ax.bar(bar_positions, values, width, label=label)
         all_plot_values.extend(values.tolist())
 
     ax.set_title("Multi-seed average performance by model")
@@ -190,10 +196,10 @@ def save_multi_seed_report(metrics: pd.DataFrame, output_dir: Path) -> None:
     ax.set_ylabel("Score")
     ax.set_xticks([pos + 1.5 * width for pos in x])
     ax.set_xticklabels(agg["model"])
-    y_min, y_max = _get_plot_limits(pd.Series(error_values if error_values else all_plot_values), min_margin=0.08, max_margin=0.04, cap_max=1.05)
+    y_min, y_max = _get_plot_limits(pd.Series(all_plot_values), min_margin=0.08, max_margin=0.04, cap_max=None)
     ax.set_ylim(y_min, y_max)
     ax.grid(axis="y", linestyle="--", alpha=0.4)
-    ax.legend(title="Metric")
+    ax.legend(title="Metric", bbox_to_anchor=(1.02, 1), loc="upper left")
     for container in ax.containers:
         if hasattr(container, "patches"):
             ax.bar_label(container, fmt="%.2f", label_type="edge", padding=2)
@@ -207,15 +213,13 @@ def save_multi_seed_report(metrics: pd.DataFrame, output_dir: Path) -> None:
     ax.bar(
         agg["model"],
         agg["f1_macro_mean"],
-        yerr=agg["f1_macro_std"].fillna(0),
-        capsize=5,
         color="tab:orange",
     )
     y_min, y_max = _get_plot_limits(
-        agg["f1_macro_mean"] + agg["f1_macro_std"].fillna(0),
+        agg["f1_macro_mean"],
         min_margin=0.08,
         max_margin=0.04,
-        cap_max=1.05,
+        cap_max=None,
     )
     ax.set_ylim(y_min, y_max)
     ax.set_title("Multi-seed average F1 score by model")
@@ -250,7 +254,7 @@ def generate_report(
         save_class_f1_comparison(
             metrics_dir=metrics_dir,
             output_dir=output_dir,
-            model_names=["logistic_regression", "random_forest", "xgboost", "xgboost_balanced", "mlp_torch"],
+            model_names=["logistic_regression", "random_forest", "xgboost", "mlp_torch"],
         )
         save_mlp_prediction_vs_actual(metrics_dir, output_dir)
         print(f"Saved base model summary and additional charts to {output_dir}")
