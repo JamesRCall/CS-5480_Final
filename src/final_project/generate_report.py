@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 
@@ -79,6 +80,64 @@ def load_classification_report(metrics_dir: Path, model_name: str) -> pd.DataFra
     if not path.exists():
         return None
     return pd.read_csv(path, index_col=0)
+
+
+def save_confusion_matrix_heatmaps(metrics_dir: Path, output_dir: Path, model_names: list[str]) -> None:
+    label_map = {
+        "logistic_regression": "LogReg",
+        "logistic_regression_balanced": "LogReg B",
+        "random_forest": "RF",
+        "random_forest_balanced": "RF B",
+        "xgboost": "XGB",
+        "xgboost_balanced": "XGB B",
+        "mlp_torch": "MLP",
+    }
+
+    for model_name in model_names:
+        cm = load_confusion_matrix(metrics_dir, model_name)
+        if cm is None or cm.empty:
+            continue
+
+        cm_values = cm.values.astype(float)
+        row_totals = cm_values.sum(axis=1, keepdims=True)
+        row_pct = np.divide(
+            cm_values,
+            row_totals,
+            out=np.zeros_like(cm_values, dtype=float),
+            where=row_totals > 0,
+        )
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        im = ax.imshow(row_pct, cmap="Blues", vmin=0.0, vmax=1.0)
+        ax.set_xticks(range(len(cm.columns)))
+        ax.set_yticks(range(len(cm.index)))
+        ax.set_xticklabels(cm.columns, rotation=30, ha="right")
+        ax.set_yticklabels(cm.index)
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("Actual")
+        display_name = label_map.get(model_name, model_name)
+        ax.set_title(f"Confusion Matrix (Row-Normalized): {display_name}")
+
+        for i in range(cm_values.shape[0]):
+            for j in range(cm_values.shape[1]):
+                pct = row_pct[i, j] * 100.0
+                count = int(cm_values[i, j])
+                text_color = "white" if row_pct[i, j] >= 0.5 else "black"
+                ax.text(
+                    j,
+                    i,
+                    f"{count}\n{pct:.1f}%",
+                    ha="center",
+                    va="center",
+                    color=text_color,
+                    fontsize=9,
+                )
+
+        cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        cbar.set_label("Row-normalized proportion")
+        fig.tight_layout()
+        fig.savefig(output_dir / f"confusion_matrix_{model_name}_heatmap.png", bbox_inches="tight")
+        plt.close(fig)
 
 
 def save_mlp_prediction_vs_actual(metrics_dir: Path, output_dir: Path) -> None:
@@ -251,10 +310,16 @@ def generate_report(
 
     if base_metrics is not None:
         save_model_summary(base_metrics, output_dir)
+        model_names = base_metrics["model"].dropna().astype(str).unique().tolist()
+        save_confusion_matrix_heatmaps(
+            metrics_dir=metrics_dir,
+            output_dir=output_dir,
+            model_names=model_names,
+        )
         save_class_f1_comparison(
             metrics_dir=metrics_dir,
             output_dir=output_dir,
-            model_names=["logistic_regression", "random_forest", "xgboost", "mlp_torch"],
+            model_names=model_names,
         )
         save_mlp_prediction_vs_actual(metrics_dir, output_dir)
         print(f"Saved base model summary and additional charts to {output_dir}")

@@ -1,4 +1,5 @@
 -e .
+matplotlib>=3.8
 torch>=2.3
 xgboost>=2.1
 ruff>=0.5
