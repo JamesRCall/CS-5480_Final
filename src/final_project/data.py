@@ -20,6 +20,13 @@ def load_dataframe(config: ExperimentConfig) -> pd.DataFrame:
         raise ValueError(
             f"Target column '{config.target_column}' is missing. Available columns: {list(df.columns)}"
         )
+    
+    leakage_features = ["burnout_score"] # I tried remove other features, but this was the main problem - Cooper 
+    leakage_to_drop = [col for col in leakage_features if col in df.columns]
+    if leakage_to_drop:
+        df = df.drop(columns=leakage_to_drop)
+        print(f"Removed leakage features: {leakage_to_drop}")
+    
     return df
 
 
