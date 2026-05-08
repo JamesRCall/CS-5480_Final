@@ -68,6 +68,12 @@ python -m final_project.run_multi_seed --include-baselines
 python -m final_project.generate_report
 ```
 
+### 5b. Generate 3D model visualizations
+
+```powershell
+python -m final_project.model_3d_viz --data data/employee_stress.csv --model-dir artifacts/models --output-dir artifacts/reports
+```
+
 ### 6. Generate EDA outputs
 
 ```powershell
@@ -95,7 +101,8 @@ Main figures:
 - `artifacts/models/mlp_torch.pt`
 - `artifacts/models/preprocessing.pkl`
 - `artifacts/eda/` — EDA charts and summaries
-- `artifacts/reports/` — aggregate report tables and charts (`model_performance_summary.png`, `multi_seed_performance_summary.png`, `multi_seed_f1_summary.png`, `class_f1_comparison.png`, `mlp_actual_vs_predicted_counts.png`)
+- `artifacts/reports/` — aggregate report tables and charts (`model_performance_summary.png`, `multi_seed_performance_summary.png`, `multi_seed_f1_summary.png`, `class_f1_comparison.png`, `mlp_actual_vs_predicted_counts.png`, `confusion_matrix_<model>_heatmap.png`)
+- `artifacts/reports/` — includes 3D model visuals (`mlp_pca_3d_true_vs_pred.png`, `mlp_pca_3d_correctness.png`, `mlp_network_topology_3d.png`)
 - `predictions/` — saved prediction CSVs
 
 ## File summary
@@ -104,6 +111,7 @@ Main figures:
 - `src/final_project/predict.py` — inference script that loads saved artifacts and predicts on new CSV input for `mlp_torch`, `logistic_regression`, `random_forest`, or `xgboost`.
 - `src/final_project/run_multi_seed.py` — runs the experiment over multiple seeds and aggregates results, including XGBoost when `--include-baselines` is enabled.
 - `src/final_project/generate_report.py` — builds summary tables and plots from saved metrics.
+- `src/final_project/model_3d_viz.py` — builds 3D PCA and 3D neural-network topology visualizations for the trained MLP.
 - `src/final_project/eda_report.py` — generates exploratory data analysis figures and data summaries.
 - `src/final_project/evaluate.py` — metric calculation and export helper functions.
 - `src/final_project/data.py` — data loading, splitting, preprocessing, and feature handling.
@@ -119,4 +127,5 @@ Main figures:
 - `python -m final_project.predict --save`
 - `python -m final_project.run_multi_seed --include-baselines`
 - `python -m final_project.generate_report`
+- `python -m final_project.model_3d_viz --data data/employee_stress.csv --model-dir artifacts/models --output-dir artifacts/reports`
 - `python -m final_project.eda_report --data data/employee_stress.csv`

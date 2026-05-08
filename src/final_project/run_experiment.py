@@ -46,12 +46,14 @@ def run(config: ExperimentConfig):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     results: list[dict] = []
+    trained_baselines: dict[str, object] = {}
 
     if "logistic_regression" in config.ml_models:
         logreg = train_logistic_regression(x_train, y_train_enc, config.random_seed)
         preds = logreg.predict(x_test)
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "logistic_regression", **metrics})
+        trained_baselines["logistic_regression"] = logreg
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "logistic_regression")
         save_classification_report(y_test_enc, preds, class_names, output_dir, "logistic_regression")
 
@@ -62,6 +64,7 @@ def run(config: ExperimentConfig):
         preds = logreg_bal.predict(x_test)
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "logistic_regression_balanced", **metrics})
+        trained_baselines["logistic_regression_balanced"] = logreg_bal
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "logistic_regression_balanced")
         save_classification_report(y_test_enc, preds, class_names, output_dir, "logistic_regression_balanced")
 
@@ -70,6 +73,7 @@ def run(config: ExperimentConfig):
         preds = rf.predict(x_test)
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "random_forest", **metrics})
+        trained_baselines["random_forest"] = rf
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "random_forest")
         save_classification_report(y_test_enc, preds, class_names, output_dir, "random_forest")
 
@@ -78,6 +82,7 @@ def run(config: ExperimentConfig):
         preds = rf_bal.predict(x_test)
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "random_forest_balanced", **metrics})
+        trained_baselines["random_forest_balanced"] = rf_bal
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "random_forest_balanced")
         save_classification_report(y_test_enc, preds, class_names, output_dir, "random_forest_balanced")
 
@@ -86,6 +91,7 @@ def run(config: ExperimentConfig):
         preds = xgb.predict(x_test)
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "xgboost", **metrics})
+        trained_baselines["xgboost"] = xgb
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "xgboost")
         save_classification_report(y_test_enc, preds, class_names, output_dir, "xgboost")
 
@@ -100,6 +106,7 @@ def run(config: ExperimentConfig):
         preds = xgb_bal.predict(x_test)
         metrics = classification_metrics(y_test_enc, preds)
         results.append({"model": "xgboost_balanced", **metrics})
+        trained_baselines["xgboost_balanced"] = xgb_bal
         save_confusion_matrix(y_test_enc, preds, class_names, output_dir, "xgboost_balanced")
         save_classification_report(y_test_enc, preds, class_names, output_dir, "xgboost_balanced")
 
@@ -144,6 +151,11 @@ def run(config: ExperimentConfig):
         },
         model_dir / "mlp_torch.pt",
     )
+
+    # Save fitted baseline estimators so predict.py can load them later.
+    for model_name, model_obj in trained_baselines.items():
+        with (model_dir / f"{model_name}.pkl").open("wb") as f:
+            pickle.dump(model_obj, f)
 
     save_metrics(results, output_dir, primary_metric="f1_macro")
 
